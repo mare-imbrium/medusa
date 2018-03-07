@@ -2,13 +2,18 @@
 # ----------------------------------------------------------------------------- #
 #         File: meds.rb
 #  Description: prints when a medicine will be finishing and sends alert
-#               Also, will allow input and update of meds.
-#       Author:  r kumar
+#               Also, allow input and update of meds.
+#       Author:  j kepler
 #         Date: 2018-02-28 - 23:13
-#  Last update: 2018-03-03 08:42
+#  Last update: 2018-03-07 09:00
 #      License: MIT License
 # ----------------------------------------------------------------------------- #
+# CHANGELOG:
+# 
+# ----------------------------------------------------------------------------- #
+# TODO:
 #
+# ----------------------------------------------------------------------------- #
 require 'pp'
 require 'readline'
 require 'date'
@@ -22,11 +27,6 @@ require 'color' # see ~/work/projects/common/color.rb
 def input(prompt="", newline=false)
   prompt += "\n" if newline
   Readline.readline(prompt, true).squeeze(" ").strip
-end
-def agree(prompt="")
-  x = input(prompt)
-  return true if x.upcase == "Y"
-  false
 end
 
 #  edit a variable and return value as in zsh vared.
@@ -44,12 +44,6 @@ def vared var, prompt=">"
     return nil
   end
   str
-end
-
-def get_ratings prompt, ratings
-  Readline::HISTORY.clear
-  Readline::HISTORY.push(*ratings) 
-  input prompt
 end
 
 # # taken from sed.rb in bugzy
@@ -72,22 +66,7 @@ def _write filename, array
 end
 #
 # --- end common stuff # }}}
-## date in yyyy-mm-dd format
-today = Date.today.to_s
-now = Time.now.to_s
-# include? exist? each_pair split gsub
-
-def get_int message="Enter a number: ", lower=0, upper=5 # {{{
-  print message
-  str = STDIN.gets
-  Integer(str) rescue 0
-end
-def get_float message="Enter a number: ", lower=0, upper=5
-  print message
-  str = STDIN.gets
-  Float(str) rescue 0.0
-end # }}}
-
+# include? exist? each_pair split gsub join empty?
 
 # this reads the file in a loop.
 # It should not print, just put the data into a data structure
@@ -145,7 +124,7 @@ def print_all file_a # {{{
   }
 end # }}}
 
-def change_line filename, argv=[]
+def change_line filename, argv=[] # {{{
   # argv can have name of med or pattern and balance for today
   num, line = select_row filename, argv
   puts line.join("\t")
@@ -170,14 +149,14 @@ def change_line filename, argv=[]
   newline[2] = newstock
   newline[3] = newdate
   replace_line filename, num, newline
-end
-def replace_line filename, lineno, newline
+end # }}}
+def replace_line filename, lineno, newline  # {{{
   sep = "~"
   arr = _read filename
   num = lineno.to_i - 1
   arr[num] = newline.join(sep)
   _write(filename, arr)
-end
+end # }}}
 # prompt user with rows for selection
 # return selected row in an array
 def select_row filename, argv=[] # {{{
@@ -194,7 +173,7 @@ end # }}}
 
 # adds a new medicine to the file.
 # TODO should check if already present
-def add_line filename, argv=[]
+def add_line filename, argv=[] # {{{
 
   name, dosage, stock, newdate = argv
   unless name
@@ -212,14 +191,14 @@ def add_line filename, argv=[]
   str =  "#{name}~#{dosage}~#{stock}~#{newdate}"
   puts str if $opt_debug
   append_to_file filename, str
-end
-def append_to_file filename, line
+end  # }}}
+def append_to_file filename, line # {{{
   open(filename, 'a') do |f|
     f.puts line
   end
-end
+end  # }}}
 
-def alert_me filename, args=[]
+def alert_me filename, args=[] # {{{
   file_a = read_file_in_loop filename
   arr = []
   file_a.each_with_index {|cols, ix| 
@@ -230,14 +209,18 @@ def alert_me filename, args=[]
   }
 
   return if arr.empty?
-  # TODO send contents of arr as a message using mail.sh.
+  # send contents of arr as a message using mail.sh.
   str = arr.join("\n")
   email_id = ENV['MAIL_ID']
-  puts email_id
-  out = %x{ echo "#{str}" | ~/bin/mail.sh -s "Medicine alert!" #{email_id} 2>&1}
+  puts email_id if $opt_debug
+  if $opt_cron
+    out = %x{ echo "#{str}" | ~/bin/mail.sh -s "Medicine alert!" #{email_id} 2>&1}
+  else
+    puts str
+  end
 
   # install as crontab
-end
+end # }}}
 
 def find_line array, patt # {{{
   array.each_with_index {|e, ix| 
@@ -250,66 +233,34 @@ def find_line array, patt # {{{
 end # }}}
   
 
-def old_read_file_in_loop filename# {{{
-  exit 1
-  sep = '~'
-  ctr = 0
-  format='%-25s %5s %5s %-12s %-12s %-4s' 
-  puts color(format % [ "Medicine", "daily", "stock", "as_on" , "finish_on" , "balance"], "yellow", "on_black")
-  File.open(filename).each { |line|
-    line = line.chomp
-    next if line =~ /^$/
-    ctr += 1
-    next if ctr <=1
-    cols = line.split(sep)
-    name = cols[0]
-    daily = cols[1].to_f
-    stock = cols[2].to_i
-    as_on = cols[3]
-    as_on_jd = Date.parse(cols[3]).jd
-    finish_on_jd = as_on_jd + (stock/daily)
-    finish_on = Date.jd(finish_on_jd)
-    balance = (stock/daily) - (Date.today.jd - as_on_jd)
-    balance = balance.to_i
-    bg = "on_black"
-    fg = "white"
-    att = "normal"
-    code, fgcolor, bgcolor, attrib = case balance
-    when 0..5
-      ["B", "red", bg, "bold"]
-    when 6..12
-      ["C", "white", bg, att]
-    when 13..1000
-      ["C", "green", bg, att]
-    when -1000..-1
-      ["A", fg, bg, "reverse"]
-    else
-      ["?", "yellow", "on_red", att]
-    end
-    puts color(format % [ name, daily, stock, as_on , finish_on , balance], fgcolor, bgcolor, attrib)
-    #puts line 
-    # puts line if line =~ /blue/
-  }
-end # }}}
-
 if __FILE__ == $0
   include Color
   filename = nil
   $opt_verbose = false
   $opt_debug = false
   $opt_quiet = false
+  $opt_cron = false
   begin
     # http://www.ruby-doc.org/stdlib/libdoc/optparse/rdoc/classes/OptionParser.html
     require 'optparse'
     ## TODO filename should come in from -f option
-    filename= "meds.txt";
+    filename= File.expand_path("~/work/projects/meds/meds.txt");
     options = {}
+    subtext = <<HELP
+Commonly used command are:
+   mod :     update stocks. mod dilzem 45
+   low :     report on medicines running low (less than 10 days stock)
+   add :     add a new medicine. e.g., add aspirin 1 25
+HELP
     OptionParser.new do |opts|
       opts.banner = "Usage: #{$0} [options]"
 
       opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
         options[:verbose] = v
         $opt_verbose = v
+      end
+      opts.on("--crontab", "Send email, don't display on stdout") do |v|
+        $opt_cron = v
       end
       opts.on("--debug", "Show debug info") do 
         options[:debug] = true
@@ -318,6 +269,8 @@ if __FILE__ == $0
       opts.on("-q", "--quiet", "Run quietly") do |v|
         $opt_quiet = true
       end
+      opts.separator ""
+      opts.separator subtext
     end.parse!
 
     p options if $opt_debug
@@ -349,4 +302,3 @@ if __FILE__ == $0
   ensure
   end
 end
-
