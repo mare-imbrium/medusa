@@ -12,9 +12,9 @@ The alert option goes into the crontab file which will send me a mail if I need 
 
 The file format is:
 
-medicine~daily~Stock~As_On
-pantocid 20~1~24~2018-03-02
-mucinac 600~1~22~2018-03-02
+    medicine~daily~Stock~As_On
+    pantocid 20~1~24~2018-03-02
+    mucinac 600~1~22~2018-03-02
 
 So as on march 2nd, I had 24 tablets of pantocid. And she takes one a day. Daily refers to how many are taken a day, and some may be 0.5 and some are 2.
 
