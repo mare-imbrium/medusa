@@ -5,10 +5,16 @@
 #               Also, allow input and update of meds.
 #       Author:  j kepler
 #         Date: 2018-02-28 - 23:13
-#  Last update: 2018-03-07 09:00
+#  Last update: 2019-01-12 14:56
 #      License: MIT License
 # ----------------------------------------------------------------------------- #
 # CHANGELOG:
+#  2018-10-21 - readline suddenly not working, values don't show during "mod" and go as nil
+#  2018-12-08 - write to log file so I know when last I bought something. sometimes I am 
+#                out of medicine but the software shows I have it.
+#               This does not give an exact idea of how much I bought, just the stock on that day
+#               which could be a correction.
+#  2019-01-12 - Put mod in a loop since i modify several at a shot
 # 
 # ----------------------------------------------------------------------------- #
 # TODO:
@@ -31,6 +37,7 @@ end
 
 #  edit a variable and return value as in zsh vared.
 #  newstock = vared(newstock, "Enter current stock: ")
+## 2019-01-02 - this has stopped working. we should revert to OLD_vared (see seen.rb)
 def vared var, prompt=">"
   Readline.pre_input_hook = -> do
     Readline.insert_text var
@@ -91,13 +98,15 @@ def read_file_in_loop filename # {{{
     finish_on = Date.jd(finish_on_jd)
     balance = (stock/daily) - (Date.today.jd - as_on_jd)
     balance = balance.to_i
-    file_a << [ name, daily, stock, as_on, finish_on,  balance ]
+    # left is how many tablets are left
+    left = (balance*daily).to_i
+    file_a << [ name, daily, stock, as_on, finish_on, balance, left ]
   }
   return file_a
 end # }}}
 def print_all file_a # {{{
-  format='%-25s %5s %5s %-12s %-12s %-4s' 
-  puts color(format % [ "Medicine", "daily", "stock", "as_on" , "finish_on" , "days_left"], "yellow", "on_black", "bold")
+  format='%-25s %5s %5s %-12s %-12s %10s %6s' 
+  puts color(format % [ "Medicine", "daily", "stock", "as_on" , "finish_on" , "days_left", "left"], "yellow", "on_black", "bold")
   file_a.each_with_index {|cols, ix| 
     name = cols[0]
     daily = cols[1]
@@ -105,6 +114,7 @@ def print_all file_a # {{{
     as_on = cols[3]
     finish_on = cols[4]
     balance = cols[5]
+    left = cols[6]
     bg = "on_black"
     fg = "white"
     att = "normal"
@@ -120,12 +130,14 @@ def print_all file_a # {{{
     else
       ["?", "yellow", "on_red", att]
     end
-    puts color(format % [ name, daily, stock, as_on , finish_on , balance], fgcolor, bgcolor, attrib)
+    puts color(format % [ name, daily, stock, as_on , finish_on , balance, left], fgcolor, bgcolor, attrib)
   }
 end # }}}
 
 def change_line filename, argv=[] # {{{
   # argv can have name of med or pattern and balance for today
+  while true
+    ## argv is being repeated. that is an issue
   num, line = select_row filename, argv
   puts line.join("\t")
   stock = line[2]
@@ -135,20 +147,45 @@ def change_line filename, argv=[] # {{{
   else
     newstock = stock
   end
+  savedval = newstock
   puts "stock was #{line[2]} as on #{line[3]}. You passed #{newstock}"
   newstock = vared(newstock, "Enter current stock: ")
-  puts "Got #{newstock} " if $opt_debug
+  newstock = savedval if newstock.nil? or newstock == ""  ## 2018-10-21 - readline not working
+  puts "Got :#{newstock}:" if $opt_debug
+  puts "Got nil :#{newstock}:" if newstock.nil? or newstock == ""
+  raise ArgumentError, "Newstock nil" unless newstock
+
 
 
   # allow user to edit date, default to today
   newdate = Date.today.to_s
-  newdate = vared(newdate, "Enter as on date: ")
-  puts "Got #{newdate} " if $opt_debug
+  savedval = newdate
+  newdate = vared(newdate, "Enter as on date #{savedval}: ")
+  newdate = savedval if newdate.nil? or newdate == ""  ## 2018-10-21 - readline not working
+  print "How much did you buy: "
+  bought = $stdin.gets
+  if bought
+    bought = bought.chomp.to_i
+  else
+    bought = 0
+  end
+  puts "Got :#{newdate}:" if $opt_debug
   puts "line is #{num}" if $opt_debug
+  puts "Bought is #{bought}" if $opt_debug
+  raise ArgumentError, "Newdate nil" unless newdate
   newline = line.dup
   newline[2] = newstock
   newline[3] = newdate
   replace_line filename, num, newline
+  log_line newline, bought
+  puts
+  print ">> Modify another item? y/n: "
+  yesno = $stdin.gets.chomp
+  if yesno != "y"
+    break
+  end
+  end # while
+
 end # }}}
 def replace_line filename, lineno, newline  # {{{
   sep = "~"
@@ -157,6 +194,16 @@ def replace_line filename, lineno, newline  # {{{
   arr[num] = newline.join(sep)
   _write(filename, arr)
 end # }}}
+
+## log the line to a file with date so we know when we entered what
+## @param newline array of medicine name, stock, date
+def log_line newline, bought
+  sep = "~"
+  newline << bought
+  str = newline.join(sep)
+  File.open($logfile, 'a') {|f| f.puts(str) } # or f.puts or f << str
+end
+
 # prompt user with rows for selection
 # return selected row in an array
 def select_row filename, argv=[] # {{{
@@ -202,9 +249,10 @@ def alert_me filename, args=[] # {{{
   file_a = read_file_in_loop filename
   arr = []
   file_a.each_with_index {|cols, ix| 
-    name, daily, stock, as_on, finish_on, balance = cols
-    if balance < 10
-      arr << "#{name} will finish on #{finish_on}. #{balance} days left."
+    name, daily, stock, as_on, finish_on, balance, left = cols
+    if balance < 12
+      #arr << "#{name} will finish on #{finish_on}. #{balance} days left."
+      arr << "%-28s will finish on #{finish_on}. #{balance} days left." % [name, finish_on, balance]
     end
   }
 
@@ -214,9 +262,14 @@ def alert_me filename, args=[] # {{{
   email_id = ENV['MAIL_ID']
   puts email_id if $opt_debug
   if $opt_cron
-    out = %x{ echo "#{str}" | ~/bin/mail.sh -s "Medicine alert!" #{email_id} 2>&1}
+    #out = %x{ echo "#{str}" | ~/bin/mail.sh -s "Medicine alert!" #{email_id} 2>&1}
+    out = %x{ echo "#{str}" | /Users/rahul/bin/mail.sh -s "Medicine alert" #{email_id} }
+    # checking this 2018-03-25 - since cron is not sending it at all.
+    #puts str
+    #puts "#{out}"
   else
     puts str
+    puts "#{out}"
   end
 
   # install as crontab
@@ -244,7 +297,8 @@ if __FILE__ == $0
     # http://www.ruby-doc.org/stdlib/libdoc/optparse/rdoc/classes/OptionParser.html
     require 'optparse'
     ## TODO filename should come in from -f option
-    filename= File.expand_path("~/work/projects/meds/meds.txt");
+    filename = File.expand_path("~/work/projects/meds/meds.txt");
+    $logfile = File.expand_path("~/work/projects/meds/meds.log");
     options = {}
     subtext = <<HELP
 Commonly used command are:
