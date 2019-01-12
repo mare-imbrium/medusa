@@ -1,12 +1,15 @@
 medicine~daily~Stock~As_On
-pantocid 20~1~24~2018-03-02
-mucinac 600~1~37~2018-03-07
-dilzem 30~2~67~2018-03-02
-statin 10~1~38~2018-03-07
-supracal ~0.5~23~2018-03-07
-stamlo 5 ~1~38~2018-03-07~14
-deriphyllin retard 150~1~35~2018-03-02
-zevit~1~51~2018-03-02
-bifilac~3~78~2018-03-07
-zinetac~1~63~2018-03-07
-neurobion forte~3~100~2018-03-07
+pantocid_20~1~45~2019-01-05
+mucinac_600~2~76~2018-12-28
+dilzem_30~2~80~2018-12-28
+statin_10~1~40~2018-12-11
+supracal ~0.5~33~2019-01-12
+stamlo_5 ~1~51~2019-01-12~14
+deriphyllin retard 150~1~60~2018-12-28
+zevit~1~30~2019-01-02
+bifilac~3~68~2019-01-12
+zinetac~1~30~2018-12-28
+neurobion_forte~2~60~2018-12-28
+liv_52~1~100~2018-12-01
+liv_52_DS~2~62~2019-01-12
+novoret_neo~0.5~13~2019-01-02
