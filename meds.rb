@@ -5,7 +5,7 @@
 #               Also, allow input and update of meds.
 #       Author:  j kepler
 #         Date: 2018-02-28 - 23:13
-#  Last update: 2019-01-12 14:56
+#  Last update: 2019-02-08 09:10
 #      License: MIT License
 # ----------------------------------------------------------------------------- #
 # CHANGELOG:
@@ -86,6 +86,8 @@ def read_file_in_loop filename # {{{
   File.open(filename).each { |line|
     line = line.chomp
     next if line =~ /^$/
+    # 2019-02-08 - maybe we can comment off a med that is paused or discontinued
+    next if line =~ /^#/
     ctr += 1
     next if ctr <=1
     cols = line.split(sep)
@@ -94,6 +96,8 @@ def read_file_in_loop filename # {{{
     stock = cols[2].to_i
     as_on = cols[3]
     as_on_jd = Date.parse(cols[3]).jd
+    # 2019-02-08 - if we are not taking a medicine, i have made the stock zero
+    next if daily == 0
     finish_on_jd = as_on_jd + (stock/daily)
     finish_on = Date.jd(finish_on_jd)
     balance = (stock/daily) - (Date.today.jd - as_on_jd)
