@@ -5,17 +5,18 @@
 #               Also, allow input and update of meds.
 #       Author:  j kepler
 #         Date: 2018-02-28 - 23:13
-#  Last update: 2019-02-08 09:10
+#  Last update: 2019-05-27 10:10
 #      License: MIT License
 # ----------------------------------------------------------------------------- #
 # CHANGELOG:
 #  2018-10-21 - readline suddenly not working, values don't show during "mod" and go as nil
-#  2018-12-08 - write to log file so I know when last I bought something. sometimes I am 
+#  2018-12-08 - write to log file so I know when last I bought something. sometimes I am
 #                out of medicine but the software shows I have it.
 #               This does not give an exact idea of how much I bought, just the stock on that day
 #               which could be a correction.
 #  2019-01-12 - Put mod in a loop since i modify several at a shot
-# 
+#  2019-02-13 - Display only med name in mod menu, and use smenu in place of fzf
+#               since we get a matrix like menu
 # ----------------------------------------------------------------------------- #
 # TODO:
 #
@@ -45,7 +46,7 @@ def vared var, prompt=">"
     # Remove the hook right away.
     Readline.pre_input_hook = nil
   end
-  begin 
+  begin
   str = Readline.readline(prompt, false)
   rescue Exception => e
     return nil
@@ -67,7 +68,7 @@ end
 
 # write the given array to the filename
 def _write filename, array
-  File.open(filename, "w") do |file| 
+  File.open(filename, "w") do |file|
     array.each { |row| file.puts row }
   end
 end
@@ -88,8 +89,10 @@ def read_file_in_loop filename # {{{
     next if line =~ /^$/
     # 2019-02-08 - maybe we can comment off a med that is paused or discontinued
     next if line =~ /^#/
+
     ctr += 1
-    next if ctr <=1
+    next if ctr <= 1
+
     cols = line.split(sep)
     name = cols[0]
     daily = cols[1].to_f
@@ -98,7 +101,8 @@ def read_file_in_loop filename # {{{
     as_on_jd = Date.parse(cols[3]).jd
     # 2019-02-08 - if we are not taking a medicine, i have made the stock zero
     next if daily == 0
-    finish_on_jd = as_on_jd + (stock/daily)
+
+    finish_on_jd = as_on_jd + (stock / daily)
     finish_on = Date.jd(finish_on_jd)
     balance = (stock/daily) - (Date.today.jd - as_on_jd)
     balance = balance.to_i
@@ -109,9 +113,9 @@ def read_file_in_loop filename # {{{
   return file_a
 end # }}}
 def print_all file_a # {{{
-  format='%-25s %5s %5s %-12s %-12s %10s %6s' 
+  format='%-25s %5s %5s %-12s %-12s %10s %6s'
   puts color(format % [ "Medicine", "daily", "stock", "as_on" , "finish_on" , "days_left", "left"], "yellow", "on_black", "bold")
-  file_a.each_with_index {|cols, ix| 
+  file_a.each_with_index {|cols, ix|
     name = cols[0]
     daily = cols[1]
     stock = cols[2]
@@ -142,52 +146,53 @@ def change_line filename, argv=[] # {{{
   # argv can have name of med or pattern and balance for today
   while true
     ## argv is being repeated. that is an issue
-  num, line = select_row filename, argv
-  puts line.join("\t")
-  stock = line[2]
-  # if user passed a number then ask if stock to be replaced, else prompt
-  if argv.count == 2
-    newstock = argv[1]
-  else
-    newstock = stock
-  end
-  savedval = newstock
-  puts "stock was #{line[2]} as on #{line[3]}. You passed #{newstock}"
-  newstock = vared(newstock, "Enter current stock: ")
-  newstock = savedval if newstock.nil? or newstock == ""  ## 2018-10-21 - readline not working
-  puts "Got :#{newstock}:" if $opt_debug
-  puts "Got nil :#{newstock}:" if newstock.nil? or newstock == ""
-  raise ArgumentError, "Newstock nil" unless newstock
+    num, line = select_row filename, argv
+    return unless num
+    puts line.join("\t")
+    stock = line[2]
+    # if user passed a number then ask if stock to be replaced, else prompt
+    if argv.count == 2
+      newstock = argv[1]
+    else
+      newstock = stock
+    end
+    savedval = newstock
+    puts "stock was #{line[2]} as on #{line[3]}. You passed #{newstock}"
+    newstock = vared(newstock, "Enter current stock: ")
+    newstock = savedval if newstock.nil? or newstock == ""  ## 2018-10-21 - readline not working
+    puts "Got :#{newstock}:" if $opt_debug
+    puts "Got nil :#{newstock}:" if newstock.nil? or newstock == ""
+    raise ArgumentError, "Newstock nil" unless newstock
 
 
 
-  # allow user to edit date, default to today
-  newdate = Date.today.to_s
-  savedval = newdate
-  newdate = vared(newdate, "Enter as on date #{savedval}: ")
-  newdate = savedval if newdate.nil? or newdate == ""  ## 2018-10-21 - readline not working
-  print "How much did you buy: "
-  bought = $stdin.gets
-  if bought
-    bought = bought.chomp.to_i
-  else
-    bought = 0
-  end
-  puts "Got :#{newdate}:" if $opt_debug
-  puts "line is #{num}" if $opt_debug
-  puts "Bought is #{bought}" if $opt_debug
-  raise ArgumentError, "Newdate nil" unless newdate
-  newline = line.dup
-  newline[2] = newstock
-  newline[3] = newdate
-  replace_line filename, num, newline
-  log_line newline, bought
-  puts
-  print ">> Modify another item? y/n: "
-  yesno = $stdin.gets.chomp
-  if yesno != "y"
-    break
-  end
+    # allow user to edit date, default to today
+    newdate = Date.today.to_s
+    savedval = newdate
+    newdate = vared(newdate, "Enter as on date #{savedval}: ")
+    newdate = savedval if newdate.nil? or newdate == ""  ## 2018-10-21 - readline not working
+    print "How much did you buy: "
+    bought = $stdin.gets
+    if bought
+      bought = bought.chomp.to_i
+    else
+      bought = 0
+    end
+    puts "Got :#{newdate}:" if $opt_debug
+    puts "line is #{num}" if $opt_debug
+    puts "Bought is #{bought}" if $opt_debug
+    raise ArgumentError, "Newdate nil" unless newdate
+    newline = line.dup
+    newline[2] = newstock
+    newline[3] = newdate
+    replace_line filename, num, newline
+    log_line newline, bought
+    puts
+    print ">> Modify another item? y/n: "
+    yesno = $stdin.gets.chomp
+    if yesno != "y"
+      break
+    end
   end # while
 
 end # }}}
@@ -213,10 +218,22 @@ end
 def select_row filename, argv=[] # {{{
   myarg = argv.first
   sep = "~"
-  str=%x{ nl #{filename} | fzf --query="#{myarg}" -1 -0}
 
-  return nil if str.nil? or str.chomp.size == 0
-  tmp = str.chomp.split("\t")
+  ## display med names to user, this displays entire line with a number
+  #str=%x{ nl #{filename} | fzf --query="#{myarg}" -1 -0}
+
+  # prompt user with medicine names. Some meds have spaces in it, so -W tells smenu not to separate on that.
+  # Reject header row with tail, and reject commented out meds
+  str = %x{ cut -f1 -d~ #{filename} | grep -v "^#" | tail -n +2 | sort | smenu -t -W$'\n' }
+
+  return nil,nil if str.nil? or str.chomp.size == 0
+  # 2019-02-13 - now we only display medicine name,so get the rest of the row
+  str = %x{ grep -n "#{str}" #{filename} }
+  #tmp = str.chomp.split("\t")
+  #puts str
+  tmp = str.chomp.split(":")
+  #puts tmp[0]
+  #puts tmp[1]
 
   # returns lineno, and array containing rest
   return tmp[0], tmp[1].split(sep)
@@ -252,15 +269,20 @@ end  # }}}
 def alert_me filename, args=[] # {{{
   file_a = read_file_in_loop filename
   arr = []
-  file_a.each_with_index {|cols, ix| 
+
+  # sort by balance
+  file_a.sort_by! { |s| s[5] }
+
+  file_a.each_with_index do |cols, _ix|
     name, daily, stock, as_on, finish_on, balance, left = cols
     if balance < 12
       #arr << "#{name} will finish on #{finish_on}. #{balance} days left."
       arr << "%-28s will finish on #{finish_on}. #{balance} days left." % [name, finish_on, balance]
     end
-  }
+  end
 
   return if arr.empty?
+
   # send contents of arr as a message using mail.sh.
   str = arr.join("\n")
   email_id = ENV['MAIL_ID']
@@ -280,7 +302,7 @@ def alert_me filename, args=[] # {{{
 end # }}}
 
 def find_line array, patt # {{{
-  array.each_with_index {|e, ix| 
+  array.each_with_index {|e, ix|
     name = e.first
     if name =~ /name/
       return e
@@ -288,7 +310,7 @@ def find_line array, patt # {{{
   }
   return nil
 end # }}}
-  
+
 
 if __FILE__ == $0
   include Color
@@ -320,7 +342,7 @@ HELP
       opts.on("--crontab", "Send email, don't display on stdout") do |v|
         $opt_cron = v
       end
-      opts.on("--debug", "Show debug info") do 
+      opts.on("--debug", "Show debug info") do
         options[:debug] = true
         $opt_debug = true
       end
