@@ -5,7 +5,7 @@
 #               Also, allow input and update of meds.
 #       Author:  j kepler
 #         Date: 2018-02-28 - 23:13
-#  Last update: 2019-05-27 10:10
+#  Last update: 2019-05-27 10:15
 #      License: MIT License
 # ----------------------------------------------------------------------------- #
 # CHANGELOG:
@@ -112,7 +112,12 @@ def read_file_in_loop filename # {{{
   }
   return file_a
 end # }}}
+
 def print_all file_a # {{{
+
+  # sort by left (how many days left)
+  file_a.sort_by! { |s| s[5] }
+
   format='%-25s %5s %5s %-12s %-12s %10s %6s'
   puts color(format % [ "Medicine", "daily", "stock", "as_on" , "finish_on" , "days_left", "left"], "yellow", "on_black", "bold")
   file_a.each_with_index {|cols, ix|
@@ -127,17 +132,17 @@ def print_all file_a # {{{
     fg = "white"
     att = "normal"
     code, fgcolor, bgcolor, attrib = case balance
-    when 0..5
-      ["B", "red", bg, "bold"]
-    when 6..12
-      ["C", "white", bg, att]
-    when 13..1000
-      ["C", "green", bg, att]
-    when -1000..-1
-      ["A", fg, bg, "reverse"]
-    else
-      ["?", "yellow", "on_red", att]
-    end
+                                     when 0..5
+                                       ["B", "red", bg, "bold"]
+                                     when 6..12
+                                       ["C", "white", bg, att]
+                                     when 13..1000
+                                       ["C", "green", bg, att]
+                                     when -1000..-1
+                                       ["A", fg, bg, "reverse"]
+                                     else
+                                       ["?", "yellow", "on_red", att]
+                                     end
     puts color(format % [ name, daily, stock, as_on , finish_on , balance, left], fgcolor, bgcolor, attrib)
   }
 end # }}}
