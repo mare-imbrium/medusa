@@ -1,16 +1,18 @@
 medicine~daily~Stock~As_On
-pantocid_20~1~33~2019-05-19
-mucinac_600~2~7~2019-05-27
-dilzem_30~2~70~2019-05-01
-statin_10~1~32~2019-04-28
-supracal ~0.5~18~2019-05-13
-stamlo_5 ~1~60~2019-04-07~14
-deriphyllin retard 150~1~34~2019-04-26
+pantocid_20~1~33~2019-11-05
+mucinac_600~2~52~2019-11-29
+dilzem_30~2~64~2019-11-29
+statin_10~1~35~2019-11-17
+supracal ~0.5~18~2019-11-17
+stamlo_5 ~1~30~2019-11-29~14
+deriphyllin retard 150~1~38~2019-11-17
 #zevit~1~30~2019-01-30
-supradyn~1~60~2019-05-08
-bifilac~3~30~2019-05-27
-zinetac~1~59~2019-04-10
-neurobion_forte~2~14~2019-05-27
-liv_52~1~103~2019-03-13
-liv_52_DS~2~70~2019-05-15
+supradyn~1.5~60~2019-11-05
+becosules_Z~0.5~40~2019-11-29
+bifilac~2~30~2019-11-29
+zinetac~1~60~2019-10-13
+neurobion_forte~1~64~2019-11-17
+liv_52~1~100~2019-09-29
+liv_52_DS~2~60~2019-11-05
 #novoret_neo~0.5~13~2019-01-02
+aristozyme~1~30~2019-11-05
